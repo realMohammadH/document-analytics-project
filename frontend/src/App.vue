@@ -175,7 +175,7 @@
                             </div>
                             <div class="stat-card">
                                 <div class="stat-number">{{ (statistics.documents.average_confidence * 100).toFixed(1)
-                                }}%</div>
+                                    }}%</div>
                                 <div class="stat-label">Avg Confidence</div>
                             </div>
                         </div>
@@ -232,7 +232,9 @@ export default {
         const fileInput = ref(null)
 
         // API base URL - change this for local development
-        const API_BASE = 'http://localhost:5000/api'
+        // const API_BASE = 'http://localhost:5000/api'
+        const API_BASE = 'https://document-analytics-project.onrender.com/api'
+
 
         const tabs = [
             { id: 'dashboard', name: '📊 Dashboard' },
