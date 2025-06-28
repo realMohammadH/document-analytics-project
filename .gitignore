@@ -1,0 +1,16 @@
+# Node modules
+frontend/node_modules/
+
+# Vite cache
+frontend/node_modules/.vite/
+
+# Python virtual env
+backend/.venv/
+backend/__pycache__/
+
+# Byte-compiled Python
+*.py[cod]
+
+# IDE files
+.vscode/
+.idea/
