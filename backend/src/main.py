@@ -10,10 +10,14 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 # CORS(app)  # Enable CORS for all routes
 # Replace 'your-netlify-app-name' with the real name of your Netlify site
-CORS(
-    app,
-    origins=["https://685f8e92966d03140c38af75--eloquent-daffodil-e2c0a3.netlify.app"],
-)
+# CORS(
+#     app,
+#     origins=["https://685f8e92966d03140c38af75--eloquent-daffodil-e2c0a3.netlify.app"],
+# )
+# CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+CORS(app, resources={r"/api/*": {"origins": r"https://.*\.netlify\.app"}})
+
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10MB file size limit
 app.config["UPLOAD_FOLDER"] = "uploads"
 
