@@ -261,8 +261,8 @@ export default {
         const searchTime = ref(null)
 
         // API base URL - change this for local development
-        const API_BASE = 'http://localhost:5000/api'
-        // const API_BASE = 'https://document-analytics-project.onrender.com/api'
+        // const API_BASE = 'http://localhost:5000/api'
+        const API_BASE = 'https://document-analytics-project.onrender.com/api'
 
 
         const tabs = [
