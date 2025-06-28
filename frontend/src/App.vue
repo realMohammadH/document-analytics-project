@@ -127,9 +127,11 @@
                     <p style="margin-bottom: 30px; color: #6c757d;">Find documents using advanced search capabilities
                     </p>
 
-                    <input v-model="searchQuery" type="text" class="search-box"
-                        placeholder="Enter search terms (e.g., 'machine learning', 'business', 'legal')..."
-                        @keyup.enter="performSearch">
+                    <div style="margin-bottom: 20px;">
+                        <input v-model="searchQuery" type="text" class="search-box"
+                            placeholder="Enter search terms (e.g., 'machine learning', 'business', 'legal')..."
+                            @keyup.enter="performSearch">
+                    </div>
 
                     <button class="btn" @click="performSearch" :disabled="!searchQuery.trim()">
                         🔍 Search Documents
@@ -137,15 +139,41 @@
 
                     <div v-if="searchResults.length > 0" style="margin-top: 30px;">
                         <h3>📋 Search Results ({{ searchResults.length }} found)</h3>
-                        <div v-for="result in searchResults" :key="result.id" class="document-card">
-                            <h4 v-html="result.title"></h4>
-                            <p><strong>Classification:</strong>
-                                <span class="classification-badge">{{ result.classification }}</span>
-                                <span class="confidence-score">({{ (result.confidence_score * 100).toFixed(1) }}%
-                                    confidence)</span>
-                            </p>
-                            <p><strong>Relevance Score:</strong> {{ result.relevance_score }}</p>
-                            <p style="margin-top: 10px;" v-html="result.content_snippet"></p>
+                        <p v-if="searchTime !== null" style="color: #6c757d; margin-bottom: 10px;">
+                            ⏱️ Search took {{ searchTime }} seconds
+                        </p>
+                        <div v-for="result in searchResults" :key="result.id" class="search-result-card">
+                            <div class="search-result-title" v-html="result.title"></div>
+                            <div class="search-result-meta">
+                                <span>📁 {{ result.source_file }}</span>
+                                <span>🏷️ <span class="classification-badge">{{ result.classification }}</span></span>
+                                <span>📊 {{ (result.confidence_score * 100).toFixed(1) }}% confidence</span>
+                                <span>⭐ <span class="relevance-score">{{ result.relevance_score }}</span></span>
+                            </div>
+                            
+                            <!-- Text Snippets Section -->
+                            <div v-if="result.text_snippets && result.text_snippets.length > 0" class="text-snippets-section">
+                                <h4 style="margin: 15px 0 10px 0; color: #495057; font-size: 1rem;">
+                                    📍 Found {{ result.text_snippets.length }} text snippet{{ result.text_snippets.length > 1 ? 's' : '' }}:
+                                </h4>
+                                <div class="snippets-list">
+                                    <div v-for="(snippet, index) in result.text_snippets" :key="index" class="snippet-item">
+                                        <div class="snippet-header">
+                                            <span class="snippet-term">🔍 "{{ snippet.term }}"</span>
+                                            <span class="snippet-number">#{{ index + 1 }}</span>
+                                        </div>
+                                        <div class="snippet-text" v-html="snippet.snippet"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- No snippets found message -->
+                            <div v-else-if="result.matches_found && result.matches_found.length > 0" class="text-snippets-section">
+                                <div style="text-align: center; color: #6c757d; padding: 10px;">
+                                    📄 Full document content available for detailed search
+                                </div>
+                            </div>
+                             
                         </div>
                     </div>
 
@@ -230,10 +258,11 @@ export default {
         const isDragOver = ref(false)
         const uploadMessage = ref(null)
         const fileInput = ref(null)
+        const searchTime = ref(null)
 
         // API base URL - change this for local development
-        // const API_BASE = 'http://localhost:5000/api'
-        const API_BASE = 'https://document-analytics-project.onrender.com/api'
+        const API_BASE = 'http://localhost:5000/api'
+        // const API_BASE = 'https://document-analytics-project.onrender.com/api'
 
 
         const tabs = [
@@ -272,8 +301,9 @@ export default {
             try {
                 const response = await axios.get(`${API_BASE}/search`, {
                     params: { q: searchQuery.value }
-                })
+                });
                 searchResults.value = response.data.results
+                searchTime.value = response.data.search_time_seconds
                 searchPerformed.value = true
                 lastSearchQuery.value = searchQuery.value
 
@@ -424,6 +454,7 @@ export default {
             isDragOver,
             uploadMessage,
             fileInput,
+            searchTime,
             fetchDocuments,
             fetchStatistics,
             performSearch,
