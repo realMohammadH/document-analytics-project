@@ -10,7 +10,6 @@ from io import BytesIO
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from postgrest.types import ReturnMethod
-import traceback
 
 # Text extraction imports
 try:
@@ -42,19 +41,6 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 total_search_count = 0
 
-# Build common words set for keyword filtering
-# This function can be improved by fetching words from the database
-# For now, it will return a static list if the json file is gone.
-def build_common_words(top_n=30):
-    # This is a placeholder now that data.json is removed.
-    # In a production system, you might analyze words from the database periodically.
-    return set([
-        'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'i', 'it', 
-        'for', 'not', 'on', 'with', 'he', 'as', 'you', 'do', 'at', 'this', 
-        'but', 'his', 'by', 'from', 'document', 'file'
-    ])
-
-dynamic_common_words = build_common_words(top_n=30)
 
 # Helper functions
 def allowed_file(filename):

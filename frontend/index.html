@@ -30,6 +30,10 @@
             display: flex;
             justify-content: center;
             margin-bottom: 20px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: #dee2e6 #fff;
         }
 
         .tab {
@@ -39,6 +43,7 @@
             background: #fff;
             margin: 0 5px;
             border-radius: 5px;
+            white-space: nowrap;
         }
 
         .tab.active {
@@ -118,21 +123,19 @@
         }
 
         .classification-badge {
-            background: #007bff;
-            color: #fff;
+            display: inline-block;
             padding: 3px 8px;
+            font-size: 0.8rem;
             border-radius: 12px;
-            font-size: 0.8rem;
-        }
-
-        .confidence-score {
-            color: #6c757d;
-            font-size: 0.8rem;
-            margin-left: 5px;
+            background-color: #e9ecef;
+            color: #495057;
+            font-weight: 600;
         }
 
         .search-box {
             width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
             padding: 15px;
             font-size: 1.2rem;
             border-radius: 8px;
@@ -148,51 +151,23 @@
             padding: 20px;
             margin-bottom: 15px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            transition: box-shadow 0.2s ease;
+            transition: box-shadow 0.3s ease;
         }
 
         .search-result-card:hover {
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
-        .search-result-title {
+        .search-result-content h3 {
+            margin-top: 0;
+            color: #0056b3;
             font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: #007bff;
         }
 
-        .search-result-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 10px;
-            font-size: 0.9rem;
-            color: #6c757d;
-        }
-
-        .search-result-meta span {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .relevance-score {
-            background: #28a745;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-
-        .search-result-snippet {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 6px;
-            border-left: 4px solid #007bff;
-            margin-top: 10px;
-            line-height: 1.5;
+        .matched-keywords {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #f1f3f5;
         }
 
         /* Text Snippets Styling */
@@ -310,19 +285,86 @@
 
         /* Responsive design improvements */
         @media (max-width: 768px) {
+            .container {
+                padding: 0 5px;
+            }
+            .tab-content {
+                padding: 10px;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            .stat-card {
+                padding: 12px;
+            }
+            .document-card, .search-result-card {
+                padding: 12px;
+                margin-bottom: 10px;
+            }
+            .search-box {
+                padding: 10px;
+                font-size: 1rem;
+            }
+            .btn {
+                padding: 8px 12px;
+                font-size: 1rem;
+            }
+            .upload-area {
+                padding: 20px;
+            }
+            .text-snippets-section {
+                padding: 10px;
+            }
+            .snippet-item {
+                padding: 8px;
+            }
             .search-result-meta {
                 flex-direction: column;
+                gap: 6px;
+                font-size: 0.95rem;
+            }
+            .search-result-title {
+                font-size: 1rem;
+            }
+            .snippets-list {
                 gap: 8px;
             }
-            
-            .stats-grid {
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-                gap: 15px;
+            .tabs {
+                justify-content: flex-start;
+                padding: 0 2px;
+                margin-bottom: 16px;
+                padding-bottom: 3rem;
             }
-            
             .tab {
-                padding: 8px 12px;
-                font-size: 0.9rem;
+                padding: 8px 14px;
+                font-size: 0.98rem;
+                margin: 0 2px;
+            }
+        }
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 2px;
+            }
+            .tab-content {
+                padding: 4px;
+            }
+            .search-box {
+                padding: 8px;
+                font-size: 0.95rem;
+            }
+            .btn {
+                padding: 7px 10px;
+                font-size: 0.95rem;
+            }
+            .stat-card, .document-card, .search-result-card {
+                padding: 8px;
+            }
+            .search-result-title {
+                font-size: 0.95rem;
+            }
+            .snippet-item {
+                padding: 6px;
             }
         }
     </style>

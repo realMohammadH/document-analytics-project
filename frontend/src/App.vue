@@ -82,8 +82,6 @@
                             <p><strong>Type:</strong> {{ file.type }}</p>
                             <p v-if="file.classification">
                                 <strong>Classification:</strong> {{ file.classification }}
-                                <span class="confidence-score">({{ (file.confidence * 100).toFixed(1) }}%
-                                    confidence)</span>
                             </p>
                             <p v-if="file.status === 'processing'" style="color: #007bff;">🔄 Processing...</p>
                             <p v-if="file.status === 'completed'" style="color: #28a745;">✅ Completed</p>
@@ -111,74 +109,127 @@
                             <p><strong>Size:</strong> {{ formatFileSize(doc.file_size) }}</p>
                             <p><strong>Classification:</strong>
                                 <span class="classification-badge">{{ doc.classification }}</span>
-                                <span class="confidence-score">({{ (doc.confidence_score * 100).toFixed(1) }}%
-                                    confidence)</span>
                             </p>
                             <p><strong>Keywords:</strong> {{ doc.keywords.join(', ') }}</p>
                             <p><strong>Upload Date:</strong> {{ formatDate(doc.upload_date) }}</p>
-                            <p style="margin-top: 10px; color: #6c757d;">{{ doc.content_preview }}</p>
+                            <div style="margin-top: 15px;">
+                                <a 
+                                    v-if="doc.storage_url" 
+                                    :href="doc.storage_url" 
+                                    target="_blank" 
+                                    class="btn btn-secondary"
+                                >
+                                    ⬇️ Download Original
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Search Tab -->
                 <div v-if="activeTab === 'search'">
-                    <h2>🔍 Search Documents</h2>
-                    <p style="margin-bottom: 30px; color: #6c757d;">Find documents using advanced search capabilities
-                    </p>
+                    <h2>🔍 Multi-Keyword Search</h2>
+                    <p style="margin-bottom: 30px; color: #6c757d;">Find documents using multiple keywords for precise searching</p>
 
-                    <div style="margin-bottom: 20px;">
-                        <input v-model="searchQuery" type="text" class="search-box"
-                            placeholder="Enter search terms (e.g., 'machine learning', 'business', 'legal')..."
-                            @keyup.enter="performSearch">
-                    </div>
+                    <!-- Multi-Keyword Search Interface -->
+                    <div class="multi-keyword-search">
+                        <!-- Active Keywords Display -->
+                        <div v-if="searchKeywords.length > 0" class="active-keywords">
+                            <h4>🔑 Active Keywords:</h4>
+                            <div class="keyword-tags">
+                                <span v-for="(keyword, index) in searchKeywords" :key="index" class="keyword-tag">
+                                    {{ keyword }}
+                                    <button @click="removeKeyword(index)" class="remove-keyword">×</button>
+                                </span>
+                            </div>
+                        </div>
 
-                    <button class="btn" @click="performSearch" :disabled="!searchQuery.trim()">
-                        🔍 Search Documents
-                    </button>
+                        <!-- Keyword Input Section -->
+                        <div class="keyword-input-section">
+                            <div class="input-group">
+                                <input 
+                                    v-model="newKeyword" 
+                                    type="text" 
+                                    class="search-box keyword-input"
+                                    placeholder="Enter a keyword..."
+                                    @keyup.enter="addKeyword"
+                                >
+                                <button class="btn btn-primary" @click="addKeyword" :disabled="!newKeyword.trim()">
+                                    ➕ Add Keyword
+                                </button>
+                            </div>
+                        </div>
 
-                    <div v-if="searchResults.length > 0" style="margin-top: 30px;">
-                        <h3>📋 Search Results ({{ searchResults.length }} found)</h3>
-                        <p v-if="searchTime !== null" style="color: #6c757d; margin-bottom: 10px;">
-                            ⏱️ Search took {{ searchTime }} seconds
-                        </p>
-                        <div v-for="result in searchResults" :key="result.id" class="search-result-card">
-                            <div class="search-result-title" v-html="result.title"></div>
-                            <div class="search-result-meta">
-                                <span>📁 {{ result.source_file }}</span>
-                                <span>🏷️ <span class="classification-badge">{{ result.classification }}</span></span>
-                                <span>📊 {{ (result.confidence_score * 100).toFixed(1) }}% confidence</span>
-                                <span>⭐ <span class="relevance-score">{{ result.relevance_score }}</span></span>
-                            </div>
-                            
-                            <!-- Text Snippets Section -->
-                            <div v-if="result.text_snippets && result.text_snippets.length > 0" class="text-snippets-section">
-                                <h4 style="margin: 15px 0 10px 0; color: #495057; font-size: 1rem;">
-                                    📍 Found {{ result.text_snippets.length }} text snippet{{ result.text_snippets.length > 1 ? 's' : '' }}:
-                                </h4>
-                                <div class="snippets-list">
-                                    <div v-for="(snippet, index) in result.text_snippets" :key="index" class="snippet-item">
-                                        <div class="snippet-header">
-                                            <span class="snippet-term">🔍 "{{ snippet.term }}"</span>
-                                            <span class="snippet-number">#{{ index + 1 }}</span>
-                                        </div>
-                                        <div class="snippet-text" v-html="snippet.snippet"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- No snippets found message -->
-                            <div v-else-if="result.matches_found && result.matches_found.length > 0" class="text-snippets-section">
-                                <div style="text-align: center; color: #6c757d; padding: 10px;">
-                                    📄 Full document content available for detailed search
-                                </div>
-                            </div>
-                             
+                        <!-- Search Controls -->
+                        <div class="search-controls">
+                            <button 
+                                class="btn btn-success" 
+                                @click="performMultiKeywordSearch" 
+                                :disabled="searchKeywords.length === 0"
+                            >
+                                🔍 Search with {{ searchKeywords.length }} keyword{{ searchKeywords.length !== 1 ? 's' : '' }}
+                            </button>
+                            <button 
+                                class="btn btn-secondary" 
+                                @click="clearAllKeywords"
+                                :disabled="searchKeywords.length === 0"
+                            >
+                                🗑️ Clear All
+                            </button>
                         </div>
                     </div>
 
-                    <div v-else-if="searchPerformed && searchResults.length === 0" class="loading">
-                        <p>🔍 No results found for "{{ lastSearchQuery }}"</p>
+                    <!-- Search Results -->
+                    <div v-if="searchResults.length > 0 || keywordResults" style="margin-top: 30px;">
+                        <h3>📋 Search Results</h3>
+                        <p v-if="searchTime !== null" style="color: #6c757d; margin-bottom: 10px;">
+                            ⏱️ Search took {{ searchTime }} seconds
+                        </p>
+                        <p v-if="totalUniqueDocuments !== null" style="color: #495057; margin-bottom: 15px;">
+                            📄 Found {{ totalUniqueDocuments }} unique document{{ totalUniqueDocuments !== 1 ? 's' : '' }} total
+                        </p>
+                        
+                        <!-- Results grouped by keyword -->
+                        <div v-for="(keywordData, keyword) in keywordResults" :key="keyword" class="keyword-results-section">
+                            <div class="keyword-header">
+                                <h4>🔍 Results for "{{ keyword }}" ({{ keywordData.count }} found)</h4>
+                            </div>
+                            
+                            <div v-if="keywordData.count === 0" class="no-results-message">
+                                <p>No documents found containing "{{ keyword }}"</p>
+                            </div>
+                            
+                            <div v-else>
+                                <div v-for="result in keywordData.documents" :key="`${keyword}-${result.id}`" class="search-result-card">
+                                    <div class="search-result-title">{{ result.title }}</div>
+                                    <div class="search-result-meta">
+                                        <span>🏷️ <span class="classification-badge">{{ result.classification }}</span></span>
+                                        <span style="margin-left: 15px;">📁 {{ result.file_type.toUpperCase() }}</span>
+                                    </div>
+                                    
+                                    <!-- Text Snippets Section -->
+                                    <div v-if="result.text_snippets && result.text_snippets.length > 0" class="text-snippets-section">
+                                        <h5 style="margin: 10px 0 8px 0; color: #495057; font-size: 0.9rem;">
+                                            📍 Text snippets:
+                                        </h5>
+                                        <div class="snippets-list">
+                                            <div v-for="(snippet, index) in result.text_snippets" :key="index" class="snippet-item">
+                                                <div class="snippet-text" v-html="snippet.snippet"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Content preview if no snippets -->
+                                    <div v-else-if="result.content_preview" class="content-preview">
+                                        <p>{{ result.content_preview }}...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-else-if="searchPerformed && !keywordResults" class="loading">
+                        <p>🔍 No results found for keywords: "{{ lastSearchQuery }}"</p>
                     </div>
                 </div>
 
@@ -201,11 +252,7 @@
                                 <div class="stat-number">{{ statistics.documents.total_words.toLocaleString() }}</div>
                                 <div class="stat-label">Total Words</div>
                             </div>
-                            <div class="stat-card">
-                                <div class="stat-number">{{ (statistics.documents.average_confidence * 100).toFixed(1)
-                                    }}%</div>
-                                <div class="stat-label">Avg Confidence</div>
-                            </div>
+
                         </div>
 
                         <h3>📊 Document Classifications</h3>
@@ -223,14 +270,6 @@
                                 </div>
                             </div>
                         </div>
-
-                        <h3>🔑 Top Keywords</h3>
-                        <div style="margin-top: 20px;">
-                            <div v-for="keyword in statistics.keywords.top_keywords" :key="keyword.keyword"
-                                style="display: inline-block; margin: 5px; padding: 8px 16px; background: #007bff; color: white; border-radius: 20px; font-size: 0.9rem;">
-                                {{ keyword.keyword }} ({{ keyword.frequency }})
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -239,7 +278,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import axios from 'axios'
 
 export default {
@@ -259,7 +298,11 @@ export default {
         const uploadMessage = ref(null)
         const fileInput = ref(null)
         const searchTime = ref(null)
-
+        const searchKeywords = ref([])
+        const newKeyword = ref('')
+        const keywordResults = ref(null)
+        const totalUniqueDocuments = ref(null)
+        
         // API base URL - change this for local development
         // const API_BASE = 'http://localhost:5000/api'
         const API_BASE = 'https://document-analytics-project.onrender.com/api'
@@ -295,21 +338,25 @@ export default {
             }
         }
 
-        const performSearch = async () => {
-            if (!searchQuery.value.trim()) return
+        const performMultiKeywordSearch = async () => {
+            if (searchKeywords.value.length === 0) return
 
             try {
                 const response = await axios.get(`${API_BASE}/search`, {
-                    params: { q: searchQuery.value }
+                    params: { q: searchKeywords.value.join(' ') }
                 });
-                searchResults.value = response.data.results
+                // Clear old format results
+                searchResults.value = []
+                // Set new format results
+                keywordResults.value = response.data.keyword_results
+                totalUniqueDocuments.value = response.data.total_unique_documents
                 searchTime.value = response.data.search_time_seconds
                 searchPerformed.value = true
-                lastSearchQuery.value = searchQuery.value
+                lastSearchQuery.value = searchKeywords.value.join(' ')
 
                 fetchStatistics();
             } catch (error) {
-                console.error('Error performing search:', error)
+                console.error('Error performing multi-keyword search:', error)
             }
         }
 
@@ -376,7 +423,6 @@ export default {
                     // Update the frontend object with data from the successful upload
                     const newDoc = response.data.document;
                     fileObj.classification = newDoc.classification;
-                    fileObj.confidence = newDoc.confidence_score;
                     fileObj.keywords = newDoc.keywords;
                     fileObj.status = 'completed';
 
@@ -434,10 +480,50 @@ export default {
             })
         }
 
+        const addKeyword = () => {
+            if (newKeyword.value.trim() && !searchKeywords.value.includes(newKeyword.value.trim())) {
+                searchKeywords.value.push(newKeyword.value.trim())
+                newKeyword.value = ''
+            }
+        }
+
+        const removeKeyword = (index) => {
+            searchKeywords.value.splice(index, 1)
+            // Clear search results when removing a keyword
+            searchResults.value = []
+            keywordResults.value = null
+            totalUniqueDocuments.value = null
+            searchPerformed.value = false
+            lastSearchQuery.value = ''
+            searchTime.value = null
+        }
+
+        const clearAllKeywords = () => {
+            searchKeywords.value = []
+            searchResults.value = []
+            keywordResults.value = null
+            totalUniqueDocuments.value = null
+            searchPerformed.value = false
+            lastSearchQuery.value = ''
+            searchTime.value = null
+        }
+
         // Lifecycle
         onMounted(() => {
             fetchDocuments()
             fetchStatistics()
+        })
+
+        // Watch for changes in searchKeywords
+        watch(searchKeywords, (newKeywords) => {
+            if (newKeywords.length === 0) {
+                searchResults.value = []
+                keywordResults.value = null
+                totalUniqueDocuments.value = null
+                searchPerformed.value = false
+                lastSearchQuery.value = ''
+                searchTime.value = null
+            }
         })
 
         return {
@@ -455,15 +541,308 @@ export default {
             uploadMessage,
             fileInput,
             searchTime,
+            searchKeywords,
+            newKeyword,
+            keywordResults,
+            totalUniqueDocuments,
             fetchDocuments,
             fetchStatistics,
-            performSearch,
+            performMultiKeywordSearch,
             triggerFileInput,
             handleFileSelect,
             handleFileDrop,
             formatFileSize,
-            formatDate
+            formatDate,
+            addKeyword,
+            removeKeyword,
+            clearAllKeywords
         }
     }
 }
 </script>
+
+<style scoped>
+/* Multi-Keyword Search Styles */
+.multi-keyword-search {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.active-keywords {
+    margin-bottom: 20px;
+}
+
+.active-keywords h4 {
+    margin-bottom: 10px;
+    color: #495057;
+}
+
+.keyword-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.keyword-tag {
+    background: #007bff;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.remove-keyword {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.remove-keyword:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.keyword-input-section {
+    margin-bottom: 20px;
+}
+
+.input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+.keyword-input {
+    flex: 1;
+    min-width: 200px;
+    height: 40px;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 0;
+}
+
+.keyword-suggestions {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.suggestions-header {
+    padding: 10px 15px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 600;
+    color: #495057;
+}
+
+.suggestions-list {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.suggestion-item {
+    padding: 8px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.suggestion-item:hover {
+    background: #e9ecef;
+}
+
+.suggestion-highlighted {
+    background: #007bff !important;
+    color: white;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.search-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.search-tips {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #28a745;
+}
+
+.search-tips h4 {
+    margin-bottom: 10px;
+    color: #495057;
+}
+
+.search-tips ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.search-tips li {
+    margin-bottom: 5px;
+    color: #6c757d;
+}
+
+.matched-keywords {
+    margin: 10px 0;
+    padding: 8px 12px;
+    background: #e8f5e8;
+    border-radius: 6px;
+    border-left: 3px solid #28a745;
+}
+
+.matched-label {
+    font-weight: 600;
+    color: #155724;
+    margin-right: 8px;
+}
+
+.matched-keyword {
+    background: #28a745;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    margin-right: 5px;
+    display: inline-block;
+    margin-bottom: 3px;
+}
+
+/* Keyword Results Section Styles */
+.keyword-results-section {
+    margin-bottom: 30px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #e9ecef;
+}
+
+.keyword-header {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.keyword-header h4 {
+    margin: 0;
+    color: #495057;
+    font-size: 1.1rem;
+}
+
+.no-results-message {
+    text-align: center;
+    padding: 20px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.search-result-card {
+    background: white;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    transition: box-shadow 0.2s;
+}
+
+.search-result-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.search-result-title {
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 8px;
+    font-size: 1rem;
+}
+
+.search-result-meta {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.content-preview {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: #495057;
+    line-height: 1.5;
+}
+
+.text-snippets-section {
+    margin-top: 10px;
+}
+
+.snippets-list {
+    margin-top: 5px;
+}
+
+.snippet-item {
+    margin-bottom: 8px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 3px solid #007bff;
+}
+
+.snippet-text {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #495057;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .input-group {
+        flex-direction: column;
+    }
+    
+    .search-controls {
+        flex-direction: column;
+    }
+    
+    .keyword-tags {
+        gap: 6px;
+    }
+    
+    .keyword-tag {
+        font-size: 0.8rem;
+        padding: 4px 10px;
+    }
+    
+    .keyword-results-section {
+        padding: 15px;
+    }
+}
+</style>
