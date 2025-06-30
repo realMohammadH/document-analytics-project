@@ -113,32 +113,6 @@ def extract_text_snippets(text, search_terms, snippet_length=100):
     
     return unique_snippets[:5]
 
-def extract_text_from_file(file_path, file_type):
-    """Extract text from PDF, DOCX, or TXT file"""
-    text = ""
-    
-    if file_type == "pdf" and PyPDF2:
-        try:
-            with open(file_path, "rb") as f:
-                reader = PyPDF2.PdfReader(f)
-                for page in reader.pages:
-                    text += page.extract_text() or ""
-        except Exception:
-            text = ""
-    elif file_type == "docx" and docx:
-        try:
-            doc = docx.Document(file_path)
-            text = "\n".join([para.text for para in doc.paragraphs])
-        except Exception:
-            text = ""
-    elif file_type == "txt":
-        try:
-            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                text = f.read()
-        except Exception:
-            text = ""
-    
-    return text.strip()
 
 def extract_text_from_file_stream(file_stream, file_type):
     """Extract text from a file stream without saving to disk"""
@@ -218,49 +192,43 @@ CLASSIFICATION_TREE = {
 
 def classify_document(content):
     """Classify document based on predefined categories"""
+    # If the document has no content, it cannot be classified.
     if not content:
         return "Other"
     
+    # Convert content to lowercase to ensure case-insensitive matching.
     content_lower = content.lower()
+    # This dictionary will hold the match count (score) for each category.
     scores = {}
     
+    # Iterate through each category and its associated keywords in the classification tree.
     for category, keywords in CLASSIFICATION_TREE.items():
         score = 0
+        # For each keyword in the category, count how many times it appears in the text.
         for keyword in keywords:
+            # Use regex to find whole words only (e.g., 'art' doesn't match 'part').
             matches = len(re.findall(r'\b' + re.escape(keyword) + r'\b', content_lower))
             score += matches
+        # Store the total score for the category.
         scores[category] = score
     
+    # If no keywords were matched in any category, classify as "Other".
     if not scores or all(s == 0 for s in scores.values()):
         return "Other"
 
+    # Find the category with the highest score.
     best_category = max(scores, key=lambda k: scores[k])
     best_score = scores[best_category]
     
+    # Calculate a confidence score to determine if the classification is reliable.
+    # It's the ratio of the best category's score to the total score of all matched keywords.
     total_matches = sum(scores.values())
     confidence = best_score / total_matches if total_matches > 0 else 0
     
+    # Only return the best category if its confidence is above a certain threshold (30%).
+    # Otherwise, the match is too weak, so we classify it as "Other".
     return best_category if confidence >= 0.3 else "Other"
 
-def extract_keywords(text, num_keywords=5):
-    """Extract keywords using frequency analysis"""
-    words = re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())
-    
-    # Common stop words
-    stop_words = {
-        'the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'i', 'it', 
-        'for', 'not', 'on', 'with', 'he', 'as', 'you', 'do', 'at', 'this', 
-        'but', 'his', 'by', 'from', 'document', 'file', 'will', 'are', 'can'
-    }
-    
-    filtered_words = [word for word in words if word not in stop_words and len(word) > 3]
-    
-    word_freq = {}
-    for word in filtered_words:
-        word_freq[word] = word_freq.get(word, 0) + 1
-    
-    keywords = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)
-    return [word for word, freq in keywords[:num_keywords]]
 
 # API Endpoints
 @app.route("/api/health")
@@ -272,61 +240,58 @@ def health_check():
         "version": "1.0.0"
     })
 
+
 @app.route("/api/documents")
 def get_documents():
-    page = int(request.args.get("page", 1))
-    per_page = min(int(request.args.get("per_page", 10)), 50)
-
     try:
+        #sort functionality by upload date
         response = supabase.table('documents').select('*').order('upload_date', desc=True).execute()
         documents = response.data
-        
-        start = (page - 1) * per_page
-        end = start + per_page
-        
-        return jsonify({
-            "documents": documents[start:end],
-            "pagination": {
-                "page": page,
-                "per_page": per_page,
-                "total": len(documents),
-                "pages": (len(documents) + per_page - 1) // per_page,
-            },
-        })
+        return jsonify(documents)
     except Exception as e:
         return jsonify({"error": "Could not fetch documents"}), 500
 
 @app.route("/api/search")
 def search_documents():
+    # Start a timer to measure search performance.
     start_time = time.time()
+    # Use a global variable to track how many searches have been performed.
     global total_search_count
     
+    # Get the search query from the request's query parameters (e.g., /api/search?q=keyword).
     query = request.args.get("q", "")
+    # If the query is empty, return a 400 Bad Request error.
     if not query:
         return jsonify({"error": "Search query is required"}), 400
     
+    # Increment the global search counter.
     total_search_count += 1
+    # Split the query into a list of individual keywords, converted to lowercase.
     query_terms = query.lower().split()
     
-    # Store results for each keyword separately
+    # This dictionary will store the results for each individual keyword.
     keyword_results = {}
+    # This set will store unique document IDs to avoid double-counting.
     all_doc_ids = set()
     
     try:
-        # Search for each keyword individually
+        # Loop through each keyword to perform a separate search.
         for term in query_terms:
-            # Perform individual search for this keyword
+            # Use Supabase's full-text search on the 'content' column for the current term.
             response = supabase.table('documents').select('*').text_search('content', term).execute()
             docs = response.data
             
+            # This list will hold all documents found for the current keyword.
             term_results = []
             for doc in docs:
                 doc_id = doc.get("id")
+                # Add the document's ID to the set of unique IDs.
                 all_doc_ids.add(doc_id)
                 
-                # Get text snippets for this specific keyword
+                # Find and extract relevant text snippets where the keyword appears in the document's content.
                 text_snippets = extract_text_snippets(doc.get("content", ""), [term])
                 
+                # Append a structured dictionary of the document's info to the results for this term.
                 term_results.append({
                     "id": doc_id,
                     "title": doc.get("title", ""),
@@ -339,14 +304,17 @@ def search_documents():
                     "upload_date": doc.get("upload_date", "")
                 })
             
+            # Store the results for the current keyword.
             keyword_results[term] = {
                 "keyword": term,
                 "count": len(term_results),
                 "documents": term_results
             }
         
+        # Stop the timer.
         elapsed = time.time() - start_time
         
+        # Construct the final JSON response with all the search information.
         return jsonify({
             "query": query,
             "query_terms": query_terms,
@@ -355,6 +323,7 @@ def search_documents():
             "search_time_seconds": round(elapsed, 4)
         })
     except Exception as e:
+        # If any part of the search fails, return a 500 Internal Server Error.
         return jsonify({"error": f"Search failed: {str(e)}"}), 500
 
 @app.route("/api/statistics")
@@ -403,87 +372,91 @@ def get_statistics():
 
 @app.route("/api/upload", methods=["POST"])
 def upload_file():
+    # 1. --- FILE VALIDATION ---
+    # Check if the 'file' key is in the request. This is where the uploaded file is expected.
     if "file" not in request.files:
         return jsonify({"error": "No file part"}), 400
     
     file = request.files["file"]
+    # Check if the file has a name and if its extension is in our allowed list (e.g., pdf, docx, txt).
     if not file.filename or not allowed_file(file.filename):
         return jsonify({"error": "File type not allowed"}), 400
 
+    # Sanitize the filename to prevent security risks like directory traversal.
     filename = secure_filename(file.filename)
     if not filename:
         return jsonify({"error": "Invalid filename"}), 400
 
+    # 2. --- FILE PROCESSING ---
+    # Get the file extension and read the entire file into memory as bytes.
     file_type = filename.rsplit(".", 1)[1].lower()
     file_bytes = file.read()
+    # Create an in-memory stream of the file's bytes, so our text extractor can read it.
     file_stream = BytesIO(file_bytes)
 
+    # Extract all the text from the file stream based on its type (PDF, DOCX, etc.).
     content = extract_text_from_file_stream(file_stream, file_type)
     if not content:
+        # If no text could be extracted, use a placeholder.
         content = f"[No extractable text found in {filename}]"
     
-    # Upload to Supabase Storage
+    # 3. --- UPLOAD TO CLOUD STORAGE ---
     try:
+        # Create a unique filename using a UUID to prevent overwriting files with the same name.
         unique_filename = f"uploads/{uuid.uuid4()}_{filename}"
+        # Upload the raw file bytes to Supabase's object storage.
         supabase.storage.from_("documents").upload(
             file=file_bytes,
             path=unique_filename,
             file_options={"content-type": file.content_type or 'application/octet-stream'}
         )
+        # Get the public URL of the file we just uploaded.
         storage_url = supabase.storage.from_("documents").get_public_url(unique_filename)
     except Exception as e:
+        # If the upload fails, log the error and return a server error response.
         print(f"Storage upload error: {str(e)}")
         print(f"Error type: {type(e)}")
         return jsonify({"error": f"Failed to upload file to storage: {str(e)}"}), 500
 
-    # Process document
+    # 4. --- CONTENT ANALYSIS & DATABASE PREPARATION ---
+    # Analyze the extracted content to generate metadata.
     extracted_title = extract_title_from_content(content)
     classification = classify_document(content)
-    keywords = extract_keywords(content)
     
+    # Prepare a dictionary with all the data we want to save in our database table.
     new_doc_data = {
-        "title": filename,
-        "extracted_title": extracted_title,
+        "title": filename,  # Original filename
+        "extracted_title": extracted_title,  # Title found inside the document
         "file_type": file_type,
         "file_size": len(file_bytes),
         "classification": classification,
-        "keywords": keywords,
-        "upload_date": datetime.utcnow().isoformat() + "Z",
-        "content_preview": content[:200],
+        "upload_date": datetime.utcnow().isoformat() + "Z", # Use UTC time in ISO format
+        "content_preview": content[:200], # A short preview of the content
         "word_count": len(content.split()),
-        "reading_time": len(content.split()) // 200,
-        "content": content,
-        "storage_url": storage_url
+        "reading_time": len(content.split()) // 200, # Estimated reading time
+        "content": content, # Full extracted text
+        "storage_url": storage_url # Public URL to the original file
     }
     
+    # 5. --- SAVE METADATA TO DATABASE ---
     try:
+        # Insert the new document's metadata into the 'documents' table in our database.
         response = supabase.table('documents').insert(new_doc_data, returning=ReturnMethod.representation).execute()
         
+        # If the insert operation fails or returns no data, send an error.
         if not response.data:
             return jsonify({"error": "Failed to save document"}), 500
 
+        # If successful, return a success message along with the newly created document record.
         return jsonify({
             "success": True,
             "message": "File uploaded successfully",
             "document": response.data[0],
         })
     except Exception as e:
+        # If saving to the database fails, return a server error.
         return jsonify({"error": "Failed to save document metadata"}), 500
 
-@app.route("/api/sorted_documents")
-def get_sorted_documents():
-    start_time = time.time()
-    try:
-        response = supabase.table('documents').select('*').order('extracted_title', desc=False).execute()
-        elapsed = time.time() - start_time
-        
-        return jsonify({
-            "documents": response.data,
-            "sort_time_seconds": round(elapsed, 4),
-            "total": len(response.data)
-        })
-    except Exception as e:
-        return jsonify({"error": "Could not fetch sorted documents"}), 500
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

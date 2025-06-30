@@ -104,24 +104,14 @@
 
                     <div v-else>
                         <div v-for="doc in documents" :key="doc.id" class="document-card">
-                            <h4>{{ doc.title }}</h4>
-                            <p><strong>Type:</strong> {{ doc.file_type.toUpperCase() }}</p>
+                            <h4>{{ doc.extracted_title || doc.title || 'Untitled Document' }}</h4>
+                            <p><strong>Type:</strong> {{ doc.file_type ? doc.file_type.toUpperCase() : 'N/A' }}</p>
                             <p><strong>Size:</strong> {{ formatFileSize(doc.file_size) }}</p>
                             <p><strong>Classification:</strong>
-                                <span class="classification-badge">{{ doc.classification }}</span>
+                                <span class="classification-badge">{{ doc.classification || 'Unclassified' }}</span>
                             </p>
-                            <p><strong>Keywords:</strong> {{ doc.keywords.join(', ') }}</p>
                             <p><strong>Upload Date:</strong> {{ formatDate(doc.upload_date) }}</p>
-                            <div style="margin-top: 15px;">
-                                <a 
-                                    v-if="doc.storage_url" 
-                                    :href="doc.storage_url" 
-                                    target="_blank" 
-                                    class="btn btn-secondary"
-                                >
-                                    ⬇️ Download Original
-                                </a>
-                            </div>
+                            <div style="margin-top: 15px;"></div>
                         </div>
                     </div>
                 </div>
@@ -447,37 +437,30 @@ export default {
             }
         };
 
-
-        const readFileContent = (file) => {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader()
-                reader.onload = (e) => {
-                    // For demo purposes, we'll use the filename and some sample content
-                    // In a real implementation, you'd parse the actual file content
-                    const sampleContent = `This is a document titled "${file.name}". The content would be extracted from the actual file in a real implementation. This demo shows the classification capabilities of the system.`
-                    resolve(sampleContent)
-                }
-                reader.onerror = reject
-                reader.readAsText(file)
-            })
-        }
-
         const formatFileSize = (bytes) => {
-            if (bytes === 0) return '0 Bytes'
-            const k = 1024
-            const sizes = ['Bytes', 'KB', 'MB', 'GB']
-            const i = Math.floor(Math.log(bytes) / Math.log(k))
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+            if (bytes === null || typeof bytes === 'undefined' || isNaN(bytes)) {
+                return '0 Bytes';
+            }
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
         const formatDate = (dateString) => {
-            return new Date(dateString).toLocaleDateString('en-US', {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            if (isNaN(date)) {
+                return 'Invalid Date';
+            }
+            return date.toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'
-            })
+            });
         }
 
         const addKeyword = () => {
