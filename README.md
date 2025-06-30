@@ -102,4 +102,3 @@ The core API endpoints provided by the backend are:
 
 - **Live Application**: https://6862e85739345bdfa7c30c2a--eloquent-daffodil-e2c0a3.netlify.app
 - **GitHub Repository**: https://github.com/realMohammadH/document-analytics-project
--  
