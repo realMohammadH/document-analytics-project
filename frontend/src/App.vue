@@ -311,7 +311,7 @@ export default {
             try {
                 loading.value = true
                 const response = await axios.get(`${API_BASE}/documents`)
-                documents.value = response.data.documents
+                documents.value = response.data
             } catch (error) {
                 console.error('Error fetching documents:', error)
             } finally {
