@@ -11,7 +11,6 @@ A full-stack, cloud-native application designed to upload, analyze, search, and 
   - **Content Extraction**: Full text is extracted from all documents.
   - **Title Extraction**: Intelligently finds the document's true title.
   - **Classification**: Sorts documents into categories (e.g., Academic, Business, IT).
-  - **Keyword Generation**: Identifies the most relevant keywords.
 - **🚀 Multi-Keyword Search**: A powerful search engine to find documents based on content, with matching text highlighted.
 - **📈 Analytics Dashboard**: View statistics about your document library, including total documents, total size, and classification distribution.
 - **☁️ Cloud-Native**: Built with a modern architecture and deployed on scalable cloud platforms.
